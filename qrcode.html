@@ -449,7 +449,7 @@
                     </div>
                 </div>
 
-                <div class="shape-section">
+                <!-- <div class="shape-section">
                     <h3 class="sub-title">形状样式</h3>
                     <div class="shape-grid">
                         <button v-for="shape in shapes" :key="shape.value"
@@ -459,7 +459,7 @@
                             <span>{{ shape.label }}</span>
                         </button>
                     </div>
-                </div>
+                </div> -->
 
                 <button class="generate-btn" @click="generateQRCode">
                     🚀 生成二维码
@@ -592,46 +592,55 @@
                     }
 
                     try {
-                        const canvas = document.getElementById('qrcode-canvas');
-                        if (canvas) {
-                            canvas.width = 0;
-                            canvas.height = 0;
-                        }
+                        // 确保canvas元素存在
+                        currentQRCode.value = true;
+                        
+                        // 等待Vue更新DOM，确保canvas被渲染
+                        setTimeout(() => {
+                            const canvas = document.getElementById('qrcode-canvas');
+                            
+                            if (!canvas) {
+                                console.error('Canvas元素未找到');
+                                alert('生成二维码失败，请重试！');
+                                return;
+                            }
 
-                        // 使用 QRCode.js 生成真实的二维码
-                        QRCode.toCanvas(document.getElementById('qrcode-canvas'),
-                            inputText.value,
-                            {
+                            // 简化配置，只支持颜色
+                            const options = {
                                 width: 250,
                                 margin: 1,
                                 color: {
                                     dark: foregroundColor.value,
                                     light: backgroundColor.value
                                 }
-                            },
-                            function (error) {
-                                if (error) {
-                                    console.error('生成二维码失败:', error);
-                                    alert('生成二维码失败，请重试！');
-                                } else {
-                                    currentQRCode.value = true;
+                            };
 
-                                    // 添加到历史记录
-                                    addToHistory({
-                                        text: inputText.value,
-                                        qrCode: document.getElementById('qrcode-canvas').toDataURL('image/png'),
-                                        foregroundColor: foregroundColor.value,
-                                        backgroundColor: backgroundColor.value,
-                                        shape: selectedShape.value,
-                                        timestamp: new Date()
-                                    });
+                            // 使用 QRCode.js 生成二维码
+                            QRCode.toCanvas(canvas,
+                                inputText.value,
+                                options,
+                                function (error) {
+                                    if (error) {
+                                        console.error('生成二维码失败:', error);
+                                        alert('生成二维码失败，请重试！');
+                                        currentQRCode.value = false;
+                                    } else {
+                                        addToHistory({
+                                            text: inputText.value,
+                                            qrCode: canvas.toDataURL('image/png'),
+                                            foregroundColor: foregroundColor.value,
+                                            backgroundColor: backgroundColor.value,
+                                            shape: selectedShape.value,
+                                            timestamp: new Date()
+                                        });
+                                    }
                                 }
-                            }
-                        );
-
+                            );
+                        }, 0);
                     } catch (error) {
                         console.error('生成二维码失败:', error);
                         alert('生成二维码失败，请重试！');
+                        currentQRCode.value = false;
                     }
                 };
 
