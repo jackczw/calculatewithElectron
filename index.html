@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高级计算器 - Vue + Electron</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        #app {
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            padding: 30px;
+            width: 90%;
+            max-width: 500px;
+            min-width: 400px;
+            /* 确保最小宽度 */
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+
+        .calculator-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus,
+        select:focus {
+            border-color: #3498db;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+
+        .operation-selector {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        .operation-btn {
+            flex: 1;
+            min-width: 60px;
+            padding: 10px;
+            background: #ecf0f1;
+            border: 2px solid #bdc3c7;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .operation-btn:hover {
+            background: #dfe6e9;
+            transform: translateY(-2px);
+        }
+
+        .operation-btn.active {
+            background: #3498db;
+            color: white;
+            border-color: #2980b9;
+        }
+
+        .calculate-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(to right, #3498db, #2980b9);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        .calculate-btn:hover {
+            background: linear-gradient(to right, #2980b9, #3498db);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .calculate-btn:active {
+            transform: translateY(0);
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 18px;
+            border-left: 5px solid #3498db;
+        }
+
+        .result-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-top: 10px;
+            word-break: break-all;
+        }
+
+        .error {
+            color: #e74c3c;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        .history-section {
+            margin-top: 25px;
+            border-top: 2px solid #ecf0f1;
+            padding-top: 20px;
+        }
+
+        .history-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .clear-history {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .clear-history:hover {
+            background: #c0392b;
+        }
+
+        .history-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+        }
+
+        .history-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-item:last-child {
+            border-bottom: none;
+        }
+
+        .history-expression {
+            font-weight: 500;
+        }
+
+        .history-result {
+            color: #3498db;
+            font-weight: bold;
+        }
+
+        .empty-history {
+            text-align: center;
+            color: #7f8c8d;
+            padding: 20px;
+        }
+
+        .electron-title {
+            text-align: center;
+            color: #7f8c8d;
+            margin-top: 30px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <h1>高级数学计算器</h1>
+
+        <div class="calculator-container">
+            <div class="input-group">
+                <label for="num1">第一个数字：</label>
+                <input type="number" id="num1" v-model.number="num1" placeholder="输入第一个数字" @keyup.enter="calculate">
+                <div class="error" v-if="errors.num1">{{ errors.num1 }}</div>
+            </div>
+
+            <div class="operation-selector">
+                <div v-for="op in operations" :key="op.symbol" class="operation-btn"
+                    :class="{ active: selectedOperation === op.symbol }" @click="selectOperation(op.symbol)"
+                    :title="op.name">
+                    {{ op.symbol }}
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label for="num2">第二个数字：</label>
+                <input type="number" id="num2" v-model.number="num2" placeholder="输入第二个数字" @keyup.enter="calculate">
+                <div class="error" v-if="errors.num2">{{ errors.num2 }}</div>
+            </div>
+
+            <button class="calculate-btn" @click="calculate">计算</button>
+
+            <div class="result" v-if="result !== null">
+                <div>计算结果：</div>
+                <div class="result-value">{{ result }}</div>
+            </div>
+
+            <div class="history-section">
+                <div class="history-title">
+                    <h2>计算历史</h2>
+                    <button class="clear-history" @click="clearHistory" v-if="history.length > 0">
+                        清空历史
+                    </button>
+                </div>
+
+                <div class="history-list" v-if="history.length > 0">
+                    <div v-for="(item, index) in reversedHistory" :key="index" class="history-item">
+                        <span class="history-expression">
+                            {{ item.num1 }} {{ item.operation }} {{ item.num2 }}
+                        </span>
+                        <span class="history-result">= {{ item.result }}</span>
+                    </div>
+                </div>
+
+                <div class="empty-history" v-else>
+                    暂无计算历史
+                </div>
+            </div>
+
+            <div class="electron-title">使用 Vue.js 和 Electron 构建的桌面应用</div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive, computed } = Vue;
+
+        createApp({
+            setup() {
+                const num1 = ref('');
+                const num2 = ref('');
+                const result = ref(null);
+                const selectedOperation = ref('+');
+                const history = ref([]);
+                const errors = reactive({
+                    num1: '',
+                    num2: ''
+                });
+
+                const operations = [
+                    { symbol: '+', name: '加法' },
+                    { symbol: '-', name: '减法' },
+                    { symbol: '*', name: '乘法' },
+                    { symbol: '/', name: '除法' },
+                    { symbol: '%', name: '取模' },
+                    { symbol: '^', name: '幂运算' }
+                ];
+
+                const reversedHistory = computed(() => {
+                    return [...history.value].reverse();
+                });
+
+                const validateInputs = () => {
+                    let isValid = true;
+
+                    // 重置错误信息
+                    errors.num1 = '';
+                    errors.num2 = '';
+
+                    // 验证第一个数字
+                    if (num1.value === '') {
+                        errors.num1 = '请输入第一个数字';
+                        isValid = false;
+                    } else if (isNaN(num1.value)) {
+                        errors.num1 = '请输入有效的数字';
+                        isValid = false;
+                    }
+
+                    // 验证第二个数字
+                    if (num2.value === '') {
+                        errors.num2 = '请输入第二个数字';
+                        isValid = false;
+                    } else if (isNaN(num2.value)) {
+                        errors.num2 = '请输入有效的数字';
+                        isValid = false;
+                    }
+
+                    // 特殊验证：除法时第二个数字不能为0
+                    if (selectedOperation.value === '/' && parseFloat(num2.value) === 0) {
+                        errors.num2 = '除数不能为零';
+                        isValid = false;
+                    }
+
+                    return isValid;
+                };
+
+                const selectOperation = (operation) => {
+                    selectedOperation.value = operation;
+                };
+
+                const calculate = () => {
+                    if (!validateInputs()) return;
+
+                    const a = parseFloat(num1.value);
+                    const b = parseFloat(num2.value);
+                    let calculationResult;
+
+                    switch (selectedOperation.value) {
+                        case '+':
+                            calculationResult = a + b;
+                            break;
+                        case '-':
+                            calculationResult = a - b;
+                            break;
+                        case '*':
+                            calculationResult = a * b;
+                            break;
+                        case '/':
+                            calculationResult = a / b;
+                            break;
+                        case '%':
+                            calculationResult = a % b;
+                            break;
+                        case '^':
+                            calculationResult = Math.pow(a, b);
+                            break;
+                        default:
+                            calculationResult = a + b;
+                    }
+
+                    // 保留小数点后4位，避免浮点数精度问题
+                    calculationResult = Math.round(calculationResult * 10000) / 10000;
+
+                    result.value = calculationResult;
+
+                    // 添加到历史记录
+                    history.value.push({
+                        num1: a,
+                        num2: b,
+                        operation: selectedOperation.value,
+                        result: calculationResult,
+                        timestamp: new Date()
+                    });
+
+                    // 限制历史记录数量
+                    if (history.value.length > 50) {
+                        history.value.shift();
+                    }
+                };
+
+                const clearHistory = () => {
+                    history.value = [];
+                };
+
+                return {
+                    num1,
+                    num2,
+                    result,
+                    selectedOperation,
+                    operations,
+                    history,
+                    reversedHistory,
+                    errors,
+                    selectOperation,
+                    calculate,
+                    clearHistory
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+
+</html>
