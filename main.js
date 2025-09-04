@@ -19,7 +19,7 @@ function createWindow() {
     });
 
     // 加载应用的index.html
-    mainWindow.loadFile('index.html');
+    mainWindow.loadFile('enter.html');
 
     // 窗口准备好后显示，避免闪烁
     mainWindow.once('ready-to-show', () => {
